@@ -1,5 +1,5 @@
 import { LoadingButton } from "@mui/lab";
-import { ButtonProps, styled } from "@mui/material";
+import { ButtonProps, CircularProgress, styled } from "@mui/material";
 
 interface props {
   title: string;
@@ -16,13 +16,24 @@ const CustomButton = ({ title, onClick, loading = false }: props) => {
       backgroundColor: "#a435ff",
     },
     minWidth: "100%",
-    fontFamily: "Nunito Sans",
     fontWeight: "600",
     textTransform: "none",
   }));
 
   return (
-    <CButton variant="contained" loading={loading} onClick={onClick}>
+    <CButton
+      variant="contained"
+      loading={loading}
+      onClick={onClick}
+      loadingIndicator={
+        <CircularProgress
+          size={24}
+          sx={{
+            color: "#FFFFFF",
+          }}
+        />
+      }
+    >
       <span className="">{title}</span>
     </CButton>
   );
