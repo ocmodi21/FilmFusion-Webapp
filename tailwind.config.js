@@ -7,7 +7,7 @@ export default {
     },
     colors: {
       bgcolor: "#121212",
-      main: "#892CDC",
+      main: "#FF204E",
       font: "#ffffff",
     },
     extend: {},

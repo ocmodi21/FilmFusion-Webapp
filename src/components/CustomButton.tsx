@@ -10,10 +10,10 @@ interface props {
 const CustomButton = ({ title, onClick, loading = false }: props) => {
   const CButton = styled(LoadingButton)<ButtonProps>(() => ({
     color: "#FFFFFFF",
-    backgroundColor: "#892CDC",
+    backgroundColor: "#FF204E",
     fontSize: "18px",
     "&:hover": {
-      backgroundColor: "#a435ff",
+      backgroundColor: "#A0153E",
     },
     minWidth: "100%",
     fontWeight: "600",

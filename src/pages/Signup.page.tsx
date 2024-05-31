@@ -4,12 +4,6 @@ import CustomButton from "../components/CustomButton";
 import { toast } from "react-toastify";
 import useFetch from "../hooks/useFetch";
 import useStorage from "../hooks/useStorage";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import Select, { SelectChangeEvent } from "@mui/material/Select";
-import { Box } from "@mui/material";
-import { useMutation } from "@tanstack/react-query";
 
 type UserDataType = {
   first_name: string;
