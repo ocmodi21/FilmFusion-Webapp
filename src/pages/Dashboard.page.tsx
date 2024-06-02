@@ -18,6 +18,7 @@ import CTreeView from "../components/TreeView";
 import MovieDetailCard from "../components/MovieDetailCard";
 import { MovieDetail } from "../types/movie-detail";
 import axios from "axios";
+import { MovieDataJson } from "../MovieData";
 
 const drawerWidth = 250;
 
@@ -30,7 +31,7 @@ const Dashboard = (props: Props) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [currentTab, setCurrentTab] = useState("Home");
-  const [movieData, setMovieData] = useState<MovieDetail[]>([]);
+  const [movieData, setMovieData] = useState(MovieDataJson);
   const [isLoading, setIsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
@@ -61,12 +62,20 @@ const Dashboard = (props: Props) => {
           `https://www.omdbapi.com/?s=${text}&apikey=${process.env.REACT_APP_OMDB_API_KEY}`
         )
         .then((response) => {
-          setMovieData(response.data.Search);
+          if (response.data.Search) {
+            setMovieData(response.data.Search);
+          }
         });
       setIsLoading(false);
     }, 500);
 
     return () => clearTimeout(getData);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (!searchText || searchText === "") {
+      setMovieData(MovieDataJson);
+    }
   }, [searchText]);
 
   const drawer = (
