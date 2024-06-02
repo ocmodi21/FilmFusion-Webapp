@@ -230,6 +230,11 @@ const Dashboard = (props: Props) => {
         className={!movieData ? "h-screen" : "h-full"}
       >
         <Toolbar sx={{ backgroundColor: "#121212" }} />
+        {isLoading ? (
+          <div className="flex justify-center items-center h-screen">
+            <span className="text-font">Loading...</span>
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {movieData
             ? movieData.map((item: any) => (
