@@ -17,7 +17,7 @@ export default function CTreeView() {
             backgroundColor: "transparent",
           },
           "& .MuiTreeItem-label": {
-            fontSize: "20px !important",
+            fontSize: "18px !important",
           },
         }}
       >

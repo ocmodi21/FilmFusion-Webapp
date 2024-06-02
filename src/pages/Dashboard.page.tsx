@@ -1,26 +1,23 @@
-import React from "react";
+import React, { Fragment, useEffect } from "react";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import CssBaseline from "@mui/material/CssBaseline";
-import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import MenuIcon from "@mui/icons-material/Menu";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import Toolbar from "@mui/material/Toolbar";
 import Avatar from "@mui/material/Avatar";
-import { Badge } from "@mui/material";
+import { Drawer } from "@mui/material";
 import { useState } from "react";
 import useStorage from "../hooks/useStorage";
 import { useNavigate } from "react-router-dom";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import CTreeView from "../components/TreeView";
-import { useQuery } from "@tanstack/react-query";
-import useFetch from "../hooks/useFetch";
 import MovieDetailCard from "../components/MovieDetailCard";
 import { MovieDetail } from "../types/movie-detail";
+import axios from "axios";
 
 const drawerWidth = 250;
 
@@ -33,10 +30,11 @@ const Dashboard = (props: Props) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [currentTab, setCurrentTab] = useState("Home");
-  const { getDataFromStorage, clearDataFromStorage } = useStorage();
-  const { httpGet } = useFetch();
+  const [movieData, setMovieData] = useState<MovieDetail[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
-  const token = getDataFromStorage("userToken");
+  const { clearDataFromStorage } = useStorage();
   const navigate = useNavigate();
 
   const handleDrawerClose = () => {
@@ -54,16 +52,22 @@ const Dashboard = (props: Props) => {
     }
   };
 
-  const { data } = useQuery({
-    queryKey: ["movie"],
-    queryFn: async () => {
-      return await httpGet("movie/movies", token);
-    },
-  });
+  useEffect(() => {
+    const getData = setTimeout(() => {
+      const text = searchText.replace(/\s/g, "+");
+      setIsLoading(true);
+      axios
+        .get(
+          `https://www.omdbapi.com/?s=${text}&apikey=${process.env.REACT_APP_OMDB_API_KEY}`
+        )
+        .then((response) => {
+          setMovieData(response.data.Search);
+        });
+      setIsLoading(false);
+    }, 500);
 
-  if (data) {
-    console.log(data);
-  }
+    return () => clearTimeout(getData);
+  }, [searchText]);
 
   const drawer = (
     <div>
@@ -84,7 +88,7 @@ const Dashboard = (props: Props) => {
               }
             }}
           >
-            <span className="text-[20px] font-medium text-font">Home</span>
+            <span className="text-lg font-medium text-font">Home</span>
           </ListItemButton>
         </ListItem>
 
@@ -121,7 +125,7 @@ const Dashboard = (props: Props) => {
               navigate("/");
             }}
           >
-            <span className="text-[20px] font-medium text-font">Logout</span>
+            <span className="text-lg font-medium text-font">Logout</span>
           </ListItemButton>
         </ListItem>
       </List>
@@ -151,12 +155,14 @@ const Dashboard = (props: Props) => {
             >
               <MenuIcon />
             </IconButton>
-            <div className="flex items-center gap-7">
-              <Box sx={{ color: "action.active" }}>
-                <Badge sx={{ color: "#FF204E" }} variant="dot">
-                  <NotificationsIcon sx={{ cursor: "pointer" }} />
-                </Badge>
-              </Box>
+            <div className="flex items-center gap-4">
+              <input
+                className="w-full text-sm md:text-md bg-bgcolor px-3 py-2 font-bold text-font !outline-none rounded-lg border-[1px] border-main"
+                placeholder="Search"
+                type="test"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
               <Avatar
                 sizes="small"
                 alt="Travis Howard"
@@ -221,21 +227,18 @@ const Dashboard = (props: Props) => {
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           backgroundColor: "#121212",
         }}
-        className="h-full"
+        className={!movieData ? "h-screen" : "h-full"}
       >
         <Toolbar sx={{ backgroundColor: "#121212" }} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {data
-            ? data.data.movies.map((item: MovieDetail) => (
-                <MovieDetailCard
-                  id={item.id}
-                  title={item.title}
-                  genres={item.genres}
-                  poster_url={item.poster_url}
-                  release_date={item.release_date}
-                  rating={item.rating}
-                  description={item.description}
-                />
+          {movieData
+            ? movieData.map((item: any) => (
+                <Fragment key={item.imdbID}>
+                  <MovieDetailCard
+                    title={item.Title}
+                    poster_url={item.Poster}
+                  />
+                </Fragment>
               ))
             : null}
         </div>
