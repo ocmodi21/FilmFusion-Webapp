@@ -1,4 +1,7 @@
-import React, { Fragment, useEffect } from "react";
+import React, { Fragment, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -10,15 +13,17 @@ import MenuIcon from "@mui/icons-material/Menu";
 import Toolbar from "@mui/material/Toolbar";
 import Avatar from "@mui/material/Avatar";
 import { Drawer } from "@mui/material";
-import { useState } from "react";
-import useStorage from "../hooks/useStorage";
-import { useNavigate } from "react-router-dom";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
+
 import CTreeView from "../components/TreeView";
 import MovieDetailCard from "../components/MovieDetailCard";
-import { MovieDetail } from "../types/movie-detail";
-import axios from "axios";
+import useStorage from "../hooks/useStorage";
 import { MovieDataJson } from "../MovieData";
+import CModal from "../components/Modal";
+import useFetch from "../hooks/useFetch";
+import { ListData } from "../types/list-detail";
+import ListModal from "../components/ListModal";
+import { toast } from "react-toastify";
 
 const drawerWidth = 250;
 
@@ -30,12 +35,25 @@ const Dashboard = (props: Props) => {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [currentTab, setCurrentTab] = useState("Home");
   const [movieData, setMovieData] = useState(MovieDataJson);
   const [isLoading, setIsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [open, setOpen] = useState(false);
+  const [selectList, setSelectList] = useState("");
+  const [listId, setListId] = useState("");
+  const [selectMovie, setSelectMovie] = useState({
+    id: "",
+    title: "",
+    poster_url: "",
+  });
+  const [addListOpen, setAddListOpen] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
-  const { clearDataFromStorage } = useStorage();
+  const [privateListData, setPrivatelistData] = useState<ListData[]>([]);
+  const [publicListData, setPubliclistData] = useState<ListData[]>([]);
+
+  const { httpGet, httpPost } = useFetch();
+  const { getDataFromStorage, clearDataFromStorage } = useStorage();
   const navigate = useNavigate();
 
   const handleDrawerClose = () => {
@@ -52,6 +70,67 @@ const Dashboard = (props: Props) => {
       setMobileOpen(!mobileOpen);
     }
   };
+
+  const handleWatchList = async () => {
+    if (!selectMovie.id || !listId) {
+      toast.warn("All fields are mandatory.");
+      return;
+    }
+
+    if (selectMovie.id && listId) {
+      setIsFetching(true);
+      const token = await getDataFromStorage("userToken");
+
+      const movieRes = await httpPost("movie/createMovie", selectMovie, token);
+
+      if (movieRes.isError) {
+        setIsFetching(false);
+        setOpen(false);
+        toast.error("Something went wrong!!");
+        return;
+      } else {
+        const idData = {
+          movieId: selectMovie.id,
+          listId: parseInt(listId),
+        };
+
+        const res = await httpPost("list/addMovieToList", idData, token);
+
+        if (res.isError) {
+          setIsFetching(false);
+          setOpen(false);
+          toast.error(`${res.data}`);
+          return;
+        } else if (res.data) {
+          setIsFetching(false);
+          setOpen(false);
+          toast.success("Movie added to list successfully!!");
+          return;
+        }
+      }
+    }
+  };
+
+  const fetchList = async () => {
+    const token = await getDataFromStorage("userToken");
+
+    const [privateListResponse, publicListResponse] = await Promise.all([
+      httpGet(`list/privateLists`, token),
+      httpGet(`list/publicLists`, token),
+    ]);
+
+    if (privateListResponse.isError || publicListResponse.isError) {
+      toast.error(`${privateListResponse.data} || ${publicListResponse.data}`);
+      return;
+    } else {
+      setPrivatelistData(privateListResponse.data.privateLists);
+      setPubliclistData(publicListResponse.data.publicLists);
+    }
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, []);
 
   useEffect(() => {
     const getData = setTimeout(() => {
@@ -91,7 +170,6 @@ const Dashboard = (props: Props) => {
         <ListItem disablePadding>
           <ListItemButton
             onClick={() => {
-              setCurrentTab("CreateJob");
               if (!isClosing) {
                 setMobileOpen(false);
               }
@@ -104,26 +182,34 @@ const Dashboard = (props: Props) => {
         <ListItem disablePadding>
           <ListItemButton
             onClick={() => {
-              setCurrentTab("AllJob");
               if (!isClosing) {
                 setMobileOpen(false);
               }
             }}
           >
-            <CTreeView />
+            <CTreeView
+              title={"Private List"}
+              listData={privateListData}
+              addListOpen={addListOpen}
+              setAddListOpen={setAddListOpen}
+            />
           </ListItemButton>
         </ListItem>
 
         <ListItem disablePadding>
           <ListItemButton
             onClick={() => {
-              setCurrentTab("AllJob");
               if (!isClosing) {
                 setMobileOpen(false);
               }
             }}
           >
-            <CTreeView />
+            <CTreeView
+              title={"Public List"}
+              listData={publicListData}
+              addListOpen={addListOpen}
+              setAddListOpen={setAddListOpen}
+            />
           </ListItemButton>
         </ListItem>
 
@@ -239,23 +325,47 @@ const Dashboard = (props: Props) => {
         className={!movieData ? "h-screen" : "h-full"}
       >
         <Toolbar sx={{ backgroundColor: "#121212" }} />
-        {isLoading ? (
-          <div className="flex justify-center items-center h-screen">
-            <span className="text-font">Loading...</span>
-          </div>
-        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {movieData
             ? movieData.map((item: any) => (
-                <Fragment key={item.imdbID}>
+                <div key={item.imdbID}>
                   <MovieDetailCard
+                    id={item.imdbID}
                     title={item.Title}
                     poster_url={item.Poster}
+                    open={open}
+                    setOpen={setOpen}
+                    selectMovie={selectMovie}
+                    setSelectMovie={setSelectMovie}
+                    listData={
+                      selectList === "private"
+                        ? privateListData
+                        : publicListData
+                    }
                   />
-                </Fragment>
+                </div>
               ))
             : null}
         </div>
+
+        <CModal
+          open={open}
+          setOpen={setOpen}
+          selectList={selectList}
+          setSelectList={setSelectList}
+          listData={selectList === "private" ? privateListData : publicListData}
+          listId={listId}
+          setListId={setListId}
+          handleWatchList={handleWatchList}
+          isFetching={isFetching}
+        />
+
+        <ListModal
+          addListOpen={addListOpen}
+          setAddListOpen={setAddListOpen}
+          fetchList={fetchList}
+        />
       </Box>
     </Box>
   );

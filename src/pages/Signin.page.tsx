@@ -47,6 +47,7 @@ const Signin = () => {
     } else if (data) {
       toast.success("Login suceesfully!!");
       setDataToStorage("userToken", data.data.token);
+      setDataToStorage("userId", data.data.user.id);
       setLoading(false);
       navigate("/dashboard");
     }
