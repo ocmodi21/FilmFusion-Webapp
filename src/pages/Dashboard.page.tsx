@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -14,8 +14,9 @@ import Toolbar from "@mui/material/Toolbar";
 import Avatar from "@mui/material/Avatar";
 import { Drawer } from "@mui/material";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
+import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
+import { toast } from "react-toastify";
 
-import CTreeView from "../components/TreeView";
 import MovieDetailCard from "../components/MovieDetailCard";
 import useStorage from "../hooks/useStorage";
 import { MovieDataJson } from "../MovieData";
@@ -23,7 +24,6 @@ import CModal from "../components/Modal";
 import useFetch from "../hooks/useFetch";
 import { ListData } from "../types/list-detail";
 import ListModal from "../components/ListModal";
-import { toast } from "react-toastify";
 
 const drawerWidth = 250;
 
@@ -48,6 +48,9 @@ const Dashboard = (props: Props) => {
   });
   const [addListOpen, setAddListOpen] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [isAddingList, setIsAddingList] = useState(false);
+  const [listName, setListName] = React.useState("");
+  const [isAddingtoPublic, setIsAddingtoPublic] = useState(false);
 
   const [privateListData, setPrivatelistData] = useState<ListData[]>([]);
   const [publicListData, setPubliclistData] = useState<ListData[]>([]);
@@ -157,6 +160,50 @@ const Dashboard = (props: Props) => {
     }
   }, [searchText]);
 
+  const handlePrivateAddList = async () => {
+    const token = await getDataFromStorage("userToken");
+
+    setIsAddingList(true);
+    const res = await httpPost(
+      "list/createPrivateList",
+      { name: listName },
+      token
+    );
+
+    if (res.isError) {
+      setIsAddingList(false);
+      toast.error(`${res.data}`);
+      return;
+    } else if (res) {
+      fetchList();
+      setIsAddingList(false);
+      toast.success("List Created successfully!!");
+      setAddListOpen(false);
+    }
+  };
+
+  const handlePublicAddList = async () => {
+    const token = await getDataFromStorage("userToken");
+
+    setIsAddingList(true);
+    const res = await httpPost(
+      "list/createPublicList",
+      { name: listName },
+      token
+    );
+
+    if (res.isError) {
+      setIsAddingList(false);
+      toast.error(`${res.data}`);
+      return;
+    } else if (res) {
+      fetchList();
+      setIsAddingList(false);
+      toast.success("List Created successfully!!");
+      setAddListOpen(false);
+    }
+  };
+
   const drawer = (
     <div>
       <Toolbar style={{ backgroundColor: "#121212" }}>
@@ -187,12 +234,43 @@ const Dashboard = (props: Props) => {
               }
             }}
           >
-            <CTreeView
-              title={"Private List"}
-              listData={privateListData}
-              addListOpen={addListOpen}
-              setAddListOpen={setAddListOpen}
-            />
+            <SimpleTreeView>
+              <TreeItem
+                itemId="grid1"
+                label="Private List"
+                sx={{
+                  color: "#ffffff",
+                  "& .MuiTreeItem-content": {
+                    padding: "0",
+                  },
+                  "& .MuiTreeItem-content.Mui-selected": {
+                    backgroundColor: "transparent",
+                  },
+                  "& .MuiTreeItem-label": {
+                    fontSize: "18px !important",
+                  },
+                }}
+              >
+                {privateListData
+                  ? privateListData.map((list) => (
+                      <TreeItem
+                        key={String(list.id)}
+                        itemId={String(list.id)}
+                        label={list.name}
+                      />
+                    ))
+                  : null}
+                <TreeItem
+                  className="text-main"
+                  itemId={"Add private list"}
+                  label={"+ New List"}
+                  onClick={() => {
+                    setAddListOpen(true);
+                    setIsAddingtoPublic(false);
+                  }}
+                />
+              </TreeItem>
+            </SimpleTreeView>
           </ListItemButton>
         </ListItem>
 
@@ -204,12 +282,43 @@ const Dashboard = (props: Props) => {
               }
             }}
           >
-            <CTreeView
-              title={"Public List"}
-              listData={publicListData}
-              addListOpen={addListOpen}
-              setAddListOpen={setAddListOpen}
-            />
+            <SimpleTreeView>
+              <TreeItem
+                itemId="grid1"
+                label="Public List"
+                sx={{
+                  color: "#ffffff",
+                  "& .MuiTreeItem-content": {
+                    padding: "0",
+                  },
+                  "& .MuiTreeItem-content.Mui-selected": {
+                    backgroundColor: "transparent",
+                  },
+                  "& .MuiTreeItem-label": {
+                    fontSize: "18px !important",
+                  },
+                }}
+              >
+                {publicListData
+                  ? publicListData.map((list) => (
+                      <TreeItem
+                        key={String(list.id)}
+                        itemId={String(list.id)}
+                        label={list.name}
+                      />
+                    ))
+                  : null}
+                <TreeItem
+                  className="text-main"
+                  itemId={"Add private list"}
+                  label={"+ New List"}
+                  onClick={() => {
+                    setAddListOpen(true);
+                    setIsAddingtoPublic(true);
+                  }}
+                />
+              </TreeItem>
+            </SimpleTreeView>
           </ListItemButton>
         </ListItem>
 
@@ -364,7 +473,12 @@ const Dashboard = (props: Props) => {
         <ListModal
           addListOpen={addListOpen}
           setAddListOpen={setAddListOpen}
-          fetchList={fetchList}
+          listName={listName}
+          setListName={setListName}
+          isAddingList={isAddingList}
+          handleAddList={
+            isAddingtoPublic ? handlePublicAddList : handlePrivateAddList
+          }
         />
       </Box>
     </Box>

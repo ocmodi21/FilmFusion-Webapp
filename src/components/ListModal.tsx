@@ -1,50 +1,26 @@
 import * as React from "react";
 import Dialog from "@mui/material/Dialog";
 import { CircularProgress, TextField } from "@mui/material";
-import useStorage from "../hooks/useStorage";
-import useFetch from "../hooks/useFetch";
-import { toast } from "react-toastify";
 
 type ModalProp = {
   addListOpen: boolean;
   setAddListOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  fetchList: () => Promise<void>;
+  listName: string;
+  setListName: React.Dispatch<React.SetStateAction<string>>;
+  isAddingList: boolean;
+  handleAddList: () => Promise<void>;
 };
 
 export default function ListModal({
   addListOpen,
   setAddListOpen,
-  fetchList,
+  listName,
+  setListName,
+  isAddingList,
+  handleAddList,
 }: ModalProp) {
-  const [listName, setListName] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const { getDataFromStorage } = useStorage();
-  const { httpPost } = useFetch();
-
   const handleClose = () => {
     setAddListOpen(false);
-  };
-
-  const handleAddList = async () => {
-    const token = await getDataFromStorage("userToken");
-
-    setLoading(true);
-    const res = await httpPost(
-      "list/createPublicList",
-      { name: listName },
-      token
-    );
-
-    if (res.isError) {
-      setLoading(false);
-      toast.error(`${res.data}`);
-      return;
-    } else if (res) {
-      fetchList();
-      setLoading(false);
-      toast.success("List Created successfully!!");
-      setAddListOpen(false);
-    }
   };
 
   return (
@@ -86,7 +62,7 @@ export default function ListModal({
               className="text-main text-left cursor-pointer"
               onClick={handleAddList}
             >
-              {loading ? (
+              {isAddingList ? (
                 <CircularProgress size={16} sx={{ color: "#FF204E" }} />
               ) : (
                 "Add"
