@@ -15,6 +15,7 @@ import Avatar from "@mui/material/Avatar";
 import { Drawer } from "@mui/material";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
+import LinkIcon from "@mui/icons-material/Link";
 import { toast } from "react-toastify";
 
 import MovieDetailCard from "../components/MovieDetailCard";
@@ -33,27 +34,30 @@ interface Props {
 
 const Dashboard = (props: Props) => {
   const { window } = props;
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [movieData, setMovieData] = useState(MovieDataJson);
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [open, setOpen] = useState(false);
+  const [addListOpen, setAddListOpen] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isAddingList, setIsAddingList] = useState(false);
+  const [isAddingtoPublic, setIsAddingtoPublic] = useState(false);
+  const [isListClick, setIsListClick] = useState(false);
+
+  const [searchText, setSearchText] = useState("");
   const [selectList, setSelectList] = useState("");
   const [listId, setListId] = useState("");
+  const [listName, setListName] = useState("");
   const [selectMovie, setSelectMovie] = useState({
     id: "",
     title: "",
     poster_url: "",
   });
-  const [addListOpen, setAddListOpen] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
-  const [isAddingList, setIsAddingList] = useState(false);
-  const [listName, setListName] = React.useState("");
-  const [isAddingtoPublic, setIsAddingtoPublic] = useState(false);
 
+  const [movieData, setMovieData] = useState(MovieDataJson);
   const [privateListData, setPrivatelistData] = useState<ListData[]>([]);
   const [publicListData, setPubliclistData] = useState<ListData[]>([]);
+  const [selectedListData, setSelectedListData] = useState<any>([]);
 
   const { httpGet, httpPost } = useFetch();
   const { getDataFromStorage, clearDataFromStorage } = useStorage();
@@ -138,7 +142,6 @@ const Dashboard = (props: Props) => {
   useEffect(() => {
     const getData = setTimeout(() => {
       const text = searchText.replace(/\s/g, "+");
-      setIsLoading(true);
       axios
         .get(
           `https://www.omdbapi.com/?s=${text}&apikey=${process.env.REACT_APP_OMDB_API_KEY}`
@@ -148,7 +151,6 @@ const Dashboard = (props: Props) => {
             setMovieData(response.data.Search);
           }
         });
-      setIsLoading(false);
     }, 500);
 
     return () => clearTimeout(getData);
@@ -175,6 +177,7 @@ const Dashboard = (props: Props) => {
       toast.error(`${res.data}`);
       return;
     } else if (res) {
+      setListName("");
       fetchList();
       setIsAddingList(false);
       toast.success("List Created successfully!!");
@@ -197,11 +200,35 @@ const Dashboard = (props: Props) => {
       toast.error(`${res.data}`);
       return;
     } else if (res) {
+      setListName("");
       fetchList();
       setIsAddingList(false);
       toast.success("List Created successfully!!");
       setAddListOpen(false);
     }
+  };
+
+  const handleSelectedList = async (listId: Number) => {
+    const id = await getDataFromStorage("userId");
+    const token = await getDataFromStorage("userToken");
+    const data = await httpGet(`list/${id}/?listId=${listId}`, token);
+
+    if (data.isError) {
+      setIsListClick(false);
+      toast.error(`${data.data}`);
+      return;
+    } else if (data) {
+      console.log(data.data.movies);
+      setSelectedListData(data.data.movies);
+    }
+  };
+
+  const handleCopyList = async (listId: Number) => {
+    const id = await getDataFromStorage("userId");
+    const token = await getDataFromStorage("userToken");
+    const url = `${process.env.REACT_APP_API_URL}/list/${id}/?listId=${listId}`;
+    const data = await httpGet(`list/${id}/?listId=${listId}`, token);
+    navigator.clipboard.writeText(url);
   };
 
   const drawer = (
@@ -220,6 +247,7 @@ const Dashboard = (props: Props) => {
               if (!isClosing) {
                 setMobileOpen(false);
               }
+              setIsListClick(false);
             }}
           >
             <span className="text-lg font-medium text-font">Home</span>
@@ -257,6 +285,10 @@ const Dashboard = (props: Props) => {
                         key={String(list.id)}
                         itemId={String(list.id)}
                         label={list.name}
+                        onClick={() => {
+                          setIsListClick(true);
+                          handleSelectedList(list.id);
+                        }}
                       />
                     ))
                   : null}
@@ -301,11 +333,20 @@ const Dashboard = (props: Props) => {
               >
                 {publicListData
                   ? publicListData.map((list) => (
-                      <TreeItem
-                        key={String(list.id)}
-                        itemId={String(list.id)}
-                        label={list.name}
-                      />
+                      <div className="flex justify-between">
+                        <TreeItem
+                          key={String(list.id)}
+                          itemId={String(list.id)}
+                          label={list.name}
+                          onClick={() => {
+                            setIsListClick(true);
+                            handleSelectedList(list.id);
+                          }}
+                        />
+                        <div onClick={() => handleCopyList(list.id)}>
+                          <LinkIcon />
+                        </div>
+                      </div>
                     ))
                   : null}
                 <TreeItem
@@ -431,12 +472,34 @@ const Dashboard = (props: Props) => {
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           backgroundColor: "#121212",
         }}
-        className={!movieData ? "h-screen" : "h-full"}
       >
         <Toolbar sx={{ backgroundColor: "#121212" }} />
 
+        {isListClick && selectedListData.length === 0 ? (
+          <div className="flex justify-center items-center h-screen">
+            <span className="text-font text-2xl">No Data Found</span>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {movieData
+          {isListClick && selectedListData
+            ? selectedListData.map((item: any) => (
+                <div key={item.movie.imdbID}>
+                  <div className="flex justify-center rounded-lg p-4 bg-[#212121] cursor-pointer">
+                    <div className="flex flex-col w-full">
+                      <img
+                        src={item.movie.poster_url}
+                        className="h-[300px] rounded-lg mb-3"
+                      />
+                      <span className="text-main font-semibold text-lg">
+                        {item.movie.title}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            : null}
+          {movieData && !isListClick
             ? movieData.map((item: any) => (
                 <div key={item.imdbID}>
                   <MovieDetailCard
