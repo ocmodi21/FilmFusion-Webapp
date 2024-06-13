@@ -208,10 +208,31 @@ const Dashboard = (props: Props) => {
     }
   };
 
-  const handleSelectedList = async (listId: Number) => {
+  const handleSelectedPublicList = async (listId: Number) => {
     const id = await getDataFromStorage("userId");
     const token = await getDataFromStorage("userToken");
-    const data = await httpGet(`list/${id}/?listId=${listId}`, token);
+    const data = await httpGet(
+      `list/${id}/?listId=${listId}/?isPublic=true`,
+      token
+    );
+
+    if (data.isError) {
+      setIsListClick(false);
+      toast.error(`${data.data}`);
+      return;
+    } else if (data) {
+      console.log(data.data.movies);
+      setSelectedListData(data.data.movies);
+    }
+  };
+
+  const handleSelectedPrivateList = async (listId: Number) => {
+    const id = await getDataFromStorage("userId");
+    const token = await getDataFromStorage("userToken");
+    const data = await httpGet(
+      `list/${id}/?listId=${listId}/?isPublic=false`,
+      token
+    );
 
     if (data.isError) {
       setIsListClick(false);
@@ -226,8 +247,11 @@ const Dashboard = (props: Props) => {
   const handleCopyList = async (listId: Number) => {
     const id = await getDataFromStorage("userId");
     const token = await getDataFromStorage("userToken");
-    const url = `${process.env.REACT_APP_API_URL}/list/${id}/?listId=${listId}`;
-    const data = await httpGet(`list/${id}/?listId=${listId}`, token);
+    const url = `${process.env.REACT_APP_API_URL}/list/publicList/${id}/?listId=${listId}`;
+    const data = await httpGet(
+      `list/publicList/${id}/?listId=${listId}`,
+      token
+    );
     navigator.clipboard.writeText(url);
   };
 
@@ -287,7 +311,7 @@ const Dashboard = (props: Props) => {
                         label={list.name}
                         onClick={() => {
                           setIsListClick(true);
-                          handleSelectedList(list.id);
+                          handleSelectedPrivateList(list.id);
                         }}
                       />
                     ))
@@ -340,7 +364,7 @@ const Dashboard = (props: Props) => {
                           label={list.name}
                           onClick={() => {
                             setIsListClick(true);
-                            handleSelectedList(list.id);
+                            handleSelectedPublicList(list.id);
                           }}
                         />
                         <div onClick={() => handleCopyList(list.id)}>
